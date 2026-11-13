@@ -72,8 +72,9 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File "<path>\apply-on-launch.ps1"
 
 | 変数 | 効果 |
 | --- | --- |
-| `--itachou-veil` | 画像の上に敷く暗幕の濃さ。上げると落ち着く |
+| `--itachou-veil` | 画像の上に敷く暗幕の濃さ。上げると落ち着く（中央がやや濃い二層構造） |
 | `--itachou-panel` / `--itachou-panel-soft` | パネルの透け具合 |
+| `--itachou-muted` | 補助テキスト（ツール行・所要時間など）の明るさ。読みにくければ上げる |
 | `--itachou-bubble` | ユーザーメッセージの色 |
 | `--itachou-accent` 系 | アクセント色（既定 `#ff6fb5`。シアンなら `#6fd6ff`） |
 

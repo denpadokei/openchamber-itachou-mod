@@ -14,12 +14,28 @@
   --itachou-image: url("/assets/itachou-bg.jpg");
 
   /* Veil painted over the image. Raise the alpha values to calm it down,
-     lower them to let more of the picture through. */
-  --itachou-veil: linear-gradient(
-    180deg,
-    rgba(12, 6, 18, 0.45) 0%,
-    rgba(12, 6, 18, 0.72) 100%
-  );
+     lower them to let more of the picture through. The first layer darkens
+     the middle, where the message stream sits. */
+  --itachou-veil:
+    radial-gradient(
+      120% 80% at 50% 35%,
+      rgba(12, 6, 18, 0.22),
+      rgba(12, 6, 18, 0) 65%
+    ),
+    linear-gradient(
+      180deg,
+      rgba(12, 6, 18, 0.52) 0%,
+      rgba(12, 6, 18, 0.78) 100%
+    );
+
+  /* Secondary ("system") text: tool rows, durations, meta labels. Raised
+     lightness so it stays readable on top of the photo. Lower toward
+     #a8a0b4 for a quieter look. */
+  --itachou-muted: #d3ccdd;
+
+  /* A hair of shadow under secondary text, so it survives bright areas of
+     the image without dimming the whole picture. */
+  --itachou-text-shadow: 0 1px 2px rgba(8, 2, 12, 0.7);
 
   /* Translucent panel tints (plum / dark violet). */
   --itachou-panel: rgba(26, 14, 32, 0.72);
@@ -76,6 +92,7 @@ body::after {
   --surface-background: transparent !important;
 
   --muted: var(--itachou-panel-soft) !important;
+  --muted-foreground: var(--itachou-muted) !important;
   --card: var(--itachou-panel) !important;
   --popover: var(--itachou-panel-strong) !important;
 
@@ -93,6 +110,31 @@ body::after {
   --primary-active: var(--itachou-accent-active) !important;
   --primary-muted: var(--itachou-accent-soft) !important;
   --primary-foreground: var(--itachou-accent-ink) !important;
+}
+
+/* ---------------------------------------------------------------------------
+   Legibility for secondary text.
+
+   Every muted colour in the app is derived from --muted-foreground, often at
+   reduced alpha (text-muted-foreground/50 and so on). Over a photo those
+   fractions of an already-dim colour vanish, so they get a small lift here,
+   plus a slight shadow so bright parts of the image cannot swallow them.
+   --------------------------------------------------------------------------- */
+.text-muted-foreground\/50 {
+  color: color-mix(in oklab, var(--muted-foreground) 65%, transparent) !important;
+}
+
+.text-muted-foreground\/60 {
+  color: color-mix(in oklab, var(--muted-foreground) 78%, transparent) !important;
+}
+
+.text-muted-foreground\/70 {
+  color: color-mix(in oklab, var(--muted-foreground) 88%, transparent) !important;
+}
+
+[class*="text-muted-foreground"],
+[class*="text-foreground/"] {
+  text-shadow: var(--itachou-text-shadow);
 }
 
 /* Optional: frosted glass on panels. Uncomment for a stronger 痛PC look.
