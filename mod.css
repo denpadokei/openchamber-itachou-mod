@@ -14,8 +14,8 @@
   --itachou-image: url("/assets/itachou-bg.jpg");
 
   /* Veil painted over the image. Raise the alpha values to calm it down,
-     lower them to let more of the picture through. The first layer darkens
-     the middle, where the message stream sits. */
+     lower them to let more of the picture through. The radial layer only
+     softens the middle; the message stream sits on its own panel below. */
   --itachou-veil:
     radial-gradient(
       120% 80% at 50% 35%,
@@ -32,6 +32,17 @@
      lightness so it stays readable on top of the photo. Lower toward
      #a8a0b4 for a quieter look. */
   --itachou-muted: #d3ccdd;
+
+  /* Panel behind the message stream only. The photo keeps showing in the
+     sidebar, the composer strip and the space around the chat pane.
+     Raise the last number toward 0.9 to make it darker, lower it toward
+     0.55 to let more of the picture through. */
+  --itachou-stream: rgba(10, 5, 14, 0.8);
+
+  /* Width of that panel. Follows the app's own message column (48rem), so the
+     panel ends where the text ends instead of filling the whole pane. Set it
+     to 100% to cover the entire stream area. */
+  --itachou-stream-width: min(100%, 48rem);
 
   /* A hair of shadow under secondary text, so it survives bright areas of
      the image without dimming the whole picture. */
@@ -78,6 +89,22 @@ body::after {
   z-index: -1;
   background: var(--itachou-veil);
   pointer-events: none;
+}
+
+/* The message stream gets its own dark panel, so the photo stays visible
+   everywhere else: sidebar, composer, empty space, dialogs. Painted as a
+   background band rather than a background colour, so it can be narrower than
+   the stream itself; the band stays put while the messages scroll over it. */
+.chat-scroll {
+  background-image: linear-gradient(var(--itachou-stream), var(--itachou-stream));
+  background-repeat: no-repeat;
+  background-position: center top;
+  background-size: var(--itachou-stream-width) 100%;
+}
+
+/* The "wide chat" layout widens the column to 64rem. */
+.wide-chat-layout .chat-scroll {
+  background-size: min(100%, 64rem) 100%;
 }
 
 /* ---------------------------------------------------------------------------

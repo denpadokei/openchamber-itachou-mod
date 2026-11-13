@@ -17,7 +17,10 @@ OpenChamber のテーマ（`~/.config/openchamber/themes/*.json`）は色・フ�
 
 1. `mod.css` と画像を `<app>\resources\web-dist\assets\` にコピー
 2. `web-dist\index.html` の `</head>` 直前に `<link rel="stylesheet">` を 1 行追加
+   （`?v=<内容ハッシュ>` 付き。アプリは `/assets/*` を 1 年 `immutable` で
+   キャッシュするため、内容が変われば URL も変えてキャッシュを避ける）
 3. CSS 側で背景レイヤー（`body::before`）と暗幕（`body::after`）を敷き、
+   メッセージ領域には専用のパネルを敷き、
    `:root:root { --background: transparent !important; ... }` で
    テーマが出力する不透明な背景色を上書きする
 
@@ -73,6 +76,8 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File "<path>\apply-on-launch.ps1"
 | 変数 | 効果 |
 | --- | --- |
 | `--itachou-veil` | 画像の上に敷く暗幕の濃さ。上げると落ち着く（中央がやや濃い二層構造） |
+| `--itachou-stream` | メッセージ領域だけに敷くパネルの濃さ（既定 `rgba(10, 5, 14, 0.8)`） |
+| `--itachou-stream-width` | そのパネルの幅（既定 `min(100%, 48rem)`。`100%` で全幅） |
 | `--itachou-panel` / `--itachou-panel-soft` | パネルの透け具合 |
 | `--itachou-muted` | 補助テキスト（ツール行・所要時間など）の明るさ。読みにくければ上げる |
 | `--itachou-bubble` | ユーザーメッセージの色 |

@@ -75,14 +75,36 @@ if (-not (Test-Path $cssSource)) {
     throw "mod.css not found next to install.ps1."
 }
 
+# The renderer serves /assets/* with "Cache-Control: immutable" for a year, so a
+# plain reload would keep showing the previous CSS (and image). Giving both the
+# <link> href and the background-image URL a content hash makes every change a
+# new URL, which skips that cache.
+
+$cssHash = (Get-FileHash -LiteralPath $cssSource -Algorithm SHA256).Hash
+$bgHash = (Get-FileHash -LiteralPath $bgSource -Algorithm SHA256).Hash
+$version = $cssHash.Substring(0, 6).ToLowerInvariant() + $bgHash.Substring(0, 6).ToLowerInvariant()
+
 Copy-Item $bgSource (Join-Path $assets $BgName) -Force
-Copy-Item $cssSource (Join-Path $assets $CssName) -Force
+
+$css = Get-Content -LiteralPath $cssSource -Raw
+$css = $css -replace "($([regex]::Escape($BgName)))(?!\?v=)", "`$1?v=$($bgHash.Substring(0, 10).ToLowerInvariant())"
+Set-Content -LiteralPath (Join-Path $assets $CssName) -Value $css -Encoding utf8 -NoNewline
 
 $indexPath = Join-Path $WebDist 'index.html'
 $html = Get-Content -LiteralPath $indexPath -Raw
 
-if ($html.Contains($Marker)) {
-    Write-Host "Link already present in index.html — files refreshed."
+# ${...} matters: "$CssName?v" would be parsed as one (empty) variable name.
+$snippet = "$Marker`r`n  <link rel=`"stylesheet`" href=`"/assets/${CssName}?v=${version}`" />`r`n"
+$linkPattern = '(?s)' + [regex]::Escape($Marker) + '\s*<link[^>]*' + [regex]::Escape($CssName) + '[^>]*>[ \t]*\r?\n?'
+
+if ($html -match $linkPattern) {
+    if ($html.Contains("/assets/${CssName}?v=${version}")) {
+        Write-Host "Stylesheet link already at v=$version — files refreshed."
+    } else {
+        $html = [regex]::Replace($html, $linkPattern, [System.Text.RegularExpressions.MatchEvaluator] { param($m) $snippet })
+        Set-Content -LiteralPath $indexPath -Value $html -Encoding utf8 -NoNewline
+        Write-Host "Updated the stylesheet link to v=$version."
+    }
 } else {
     $backup = "$indexPath.itachou-backup"
     if (-not (Test-Path $backup)) {
@@ -93,11 +115,11 @@ if ($html.Contains($Marker)) {
         throw "No </head> in index.html — cannot inject the stylesheet link."
     }
 
-    $snippet = "$Marker`r`n  <link rel=`"stylesheet`" href=`"/assets/$CssName`" />`r`n"
+    $html = $html.Replace($Marker, '')
     $headEnd = $html.LastIndexOf('</head>')
     $html = $html.Substring(0, $headEnd) + $snippet + $html.Substring($headEnd)
     Set-Content -LiteralPath $indexPath -Value $html -Encoding utf8 -NoNewline
-    Write-Host "Injected stylesheet link into index.html."
+    Write-Host "Injected stylesheet link into index.html (v=$version)."
 }
 
 Write-Host ""
