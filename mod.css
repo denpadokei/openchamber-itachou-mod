@@ -1,0 +1,105 @@
+/* ===========================================================================
+   OpenChamber "痛PC" MOD
+   Full-screen background image + translucent panels + pink accent.
+
+   Installed into <app>\resources\web-dist\assets\itachou.css by install.ps1
+   and linked once from web-dist/index.html.
+
+   Tune the variables below, then re-run install.ps1 (or press Ctrl+R in the
+   app after install) to see the change.
+   =========================================================================== */
+
+:root {
+  /* The image itself. Served from web-dist/assets/, so the path is absolute. */
+  --itachou-image: url("/assets/itachou-bg.jpg");
+
+  /* Veil painted over the image. Raise the alpha values to calm it down,
+     lower them to let more of the picture through. */
+  --itachou-veil: linear-gradient(
+    180deg,
+    rgba(12, 6, 18, 0.45) 0%,
+    rgba(12, 6, 18, 0.72) 100%
+  );
+
+  /* Translucent panel tints (plum / dark violet). */
+  --itachou-panel: rgba(26, 14, 32, 0.72);
+  --itachou-panel-strong: rgba(26, 14, 32, 0.92);
+  --itachou-panel-soft: rgba(14, 8, 20, 0.55);
+  --itachou-panel-subtle: rgba(20, 11, 26, 0.6);
+
+  /* User message bubble. */
+  --itachou-bubble: rgba(255, 110, 190, 0.2);
+
+  /* Pink accent (平成初期っぽい). Swap for cyan with #6fd6ff if preferred. */
+  --itachou-accent: #ff6fb5;
+  --itachou-accent-hover: #ff8ac5;
+  --itachou-accent-active: #ffa1d2;
+  --itachou-accent-soft: rgba(255, 111, 181, 0.5);
+  --itachou-accent-ink: #2b0a1b;
+}
+
+/* The window itself must be see-through, otherwise the image stays hidden. */
+html,
+body {
+  background: transparent !important;
+}
+
+/* Background image, fixed to the viewport. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  background: var(--itachou-image) center / cover no-repeat fixed;
+  pointer-events: none;
+}
+
+/* Veil, so text on top stays readable. */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background: var(--itachou-veil);
+  pointer-events: none;
+}
+
+/* ---------------------------------------------------------------------------
+   Re-point the app's design tokens at translucent colours.
+
+   The theme engine writes :root { --background: ... !important } (and the same
+   block under .dark). :root:root has a higher specificity, so these win
+   regardless of stylesheet order, without touching the theme file.
+   --------------------------------------------------------------------------- */
+:root:root {
+  --background: transparent !important;
+  --surface-background: transparent !important;
+
+  --muted: var(--itachou-panel-soft) !important;
+  --card: var(--itachou-panel) !important;
+  --popover: var(--itachou-panel-strong) !important;
+
+  --surface-muted: var(--itachou-panel-soft) !important;
+  --surface-elevated: var(--itachou-panel) !important;
+  --surface-subtle: var(--itachou-panel-subtle) !important;
+
+  --sidebar-base: rgba(14, 8, 20, 0.6) !important;
+  --sidebar: var(--sidebar-base) !important;
+
+  --chat-user-message-bg: var(--itachou-bubble) !important;
+
+  --primary-base: var(--itachou-accent) !important;
+  --primary-hover: var(--itachou-accent-hover) !important;
+  --primary-active: var(--itachou-accent-active) !important;
+  --primary-muted: var(--itachou-accent-soft) !important;
+  --primary-foreground: var(--itachou-accent-ink) !important;
+}
+
+/* Optional: frosted glass on panels. Uncomment for a stronger 痛PC look.
+[class~="bg-card"],
+[class~="bg-popover"],
+[class~="bg-sidebar"],
+aside {
+  backdrop-filter: blur(10px) saturate(120%);
+}
+*/

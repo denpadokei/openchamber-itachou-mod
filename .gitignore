@@ -1,0 +1,14 @@
+# local background image, not part of the repository
+bg.jpg
+bg.png
+bg.jpeg
+bg.webp
+
+# backups created by install.ps1 inside web-dist are outside this repo,
+# but keep stray copies out anyway
+*.itachou-backup
+
+# OS noise
+Thumbs.db
+desktop.ini
+.DS_Store
