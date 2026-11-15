@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>痛PC MOD</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="wrap">
+    <header class="head">
+      <div class="head-text">
+        <h1>痛PC MOD</h1>
+        <p class="sub">背景画像と半透明パネルを OpenChamber に適用します。</p>
+      </div>
+      <span id="badge" class="badge" data-tone="neutral">確認中</span>
+    </header>
+
+    <p id="notice" class="notice" hidden></p>
+
+    <section class="card">
+      <div class="row">
+        <span class="k">状態</span>
+        <span class="v" id="state">—</span>
+      </div>
+      <div class="row">
+        <span class="k">web-dist</span>
+        <code class="v path" id="webdist">—</code>
+      </div>
+      <div class="row">
+        <span class="k">同梱画像</span>
+        <span class="v" id="bundled">—</span>
+      </div>
+      <div class="row">
+        <span class="k">PowerShell</span>
+        <span class="v" id="powershell">—</span>
+      </div>
+    </section>
+
+    <label class="field" for="image">
+      <span class="label">背景画像の絶対パス</span>
+      <input id="image" type="text" spellcheck="false" autocomplete="off"
+             placeholder="C:\pictures\wallpaper.jpg">
+    </label>
+    <p class="hint" id="imageHint">空欄ならパッケージ内の bg.jpg を使います（jpg / png / webp）。</p>
+
+    <div class="actions">
+      <button id="apply" class="btn primary" type="button">適用</button>
+      <button id="uninstall" class="btn" type="button">解除</button>
+      <button id="refresh" class="btn ghost" type="button">再確認</button>
+    </div>
+
+    <details id="logBox" class="log" hidden>
+      <summary>実行ログ</summary>
+      <pre id="log"></pre>
+    </details>
+
+    <p class="hint foot">適用・解除のあと、OpenChamber で <kbd>Ctrl</kbd>+<kbd>R</kbd> を押すと反映されます。</p>
+  </main>
+  <script src="main.js"></script>
+</body>
+</html>

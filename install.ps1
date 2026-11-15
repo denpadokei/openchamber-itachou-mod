@@ -31,6 +31,39 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
+# The extension service captures this output without a console. Windows then
+# falls back to an OEM code page that cannot represent Japanese, so ask for
+# UTF-8 only in the redirected case and leave an interactive terminal alone.
+if ([Console]::IsOutputRedirected) {
+    $OutputEncoding = [Console]::OutputEncoding = [System.Text.UTF8Encoding]::new()
+}
+
+# Windows PowerShell 5.1 cannot always represent the Japanese title when the
+# output is captured (the extension service runs it without a console), so use
+# ASCII there and keep the 痛PC spelling for an interactive terminal.
+$ProductName = if ([Console]::IsOutputRedirected) { 'Itachou MOD' } else { '痛PC MOD' }
+
+# Windows PowerShell 5.1 can fail to auto-load Microsoft.PowerShell.Utility
+# when the host starts it without a console (Get-FileHash is then missing).
+# Use .NET directly so hashing works in both 5.1 and 7.
+function Get-Sha256Hex {
+    param([Parameter(Mandatory)][string]$Path)
+
+    $sha = [System.Security.Cryptography.SHA256]::Create()
+    try {
+        $stream = [System.IO.File]::OpenRead($Path)
+        try {
+            $bytes = $sha.ComputeHash($stream)
+        } finally {
+            $stream.Dispose()
+        }
+    } finally {
+        $sha.Dispose()
+    }
+
+    return ([System.BitConverter]::ToString($bytes)).Replace('-', '').ToLowerInvariant()
+}
+
 $Marker = '<!-- itachou-mod -->'
 $CssName = 'itachou.css'
 $BgName = 'itachou-bg.jpg'
@@ -80,8 +113,8 @@ if (-not (Test-Path $cssSource)) {
 # <link> href and the background-image URL a content hash makes every change a
 # new URL, which skips that cache.
 
-$cssHash = (Get-FileHash -LiteralPath $cssSource -Algorithm SHA256).Hash
-$bgHash = (Get-FileHash -LiteralPath $bgSource -Algorithm SHA256).Hash
+$cssHash = Get-Sha256Hex -Path $cssSource
+$bgHash = Get-Sha256Hex -Path $bgSource
 $version = $cssHash.Substring(0, 6).ToLowerInvariant() + $bgHash.Substring(0, 6).ToLowerInvariant()
 
 Copy-Item $bgSource (Join-Path $assets $BgName) -Force
@@ -123,7 +156,7 @@ if ($html -match $linkPattern) {
 }
 
 Write-Host ""
-Write-Host "痛PC MOD installed:"
+Write-Host "$ProductName installed:"
 Write-Host "  web-dist : $WebDist"
 Write-Host "  css      : assets\$CssName"
 Write-Host "  image    : assets\$BgName"

@@ -1,0 +1,40 @@
+{
+  "name": "openchamber-itachou-mod",
+  "version": "0.1.0",
+  "private": true,
+  "description": "OpenChamber 痛PC MOD: background image + translucent panels, applied from an extension panel.",
+  "license": "MIT",
+  "scripts": {
+    "build": "esbuild panel/main.src.js --bundle --format=iife --platform=browser --target=es2020 --outfile=panel/main.js",
+    "check": "node --check service/main.js && node --check panel/main.js",
+    "test": "node scripts/selftest.mjs"
+  },
+  "devDependencies": {
+    "@openchamber/sdk": "2.7.2",
+    "esbuild": "^0.25.0"
+  },
+  "openchamber": {
+    "apiVersion": 1,
+    "engines": {
+      "openchamber": ">=2.5.0"
+    },
+    "id": "itachou-mod",
+    "name": "痛PC MOD",
+    "icon": "image",
+    "contributes": {
+      "panel": {
+        "entry": "panel/index.html"
+      },
+      "service": {
+        "entry": "service/main.js",
+        "runtime": "host",
+        "permissions": {
+          "exec": [
+            "pwsh",
+            "powershell"
+          ]
+        }
+      }
+    }
+  }
+}

@@ -3,6 +3,8 @@
 OpenChamber（デスクトップ版）に「全面の背景画像 + 半透明パネル + ピンクのアクセント」を当てる非公式 MOD です。
 平成初期の「痛○○」っぽい見た目を、テーマ機能の制約を回避して実現します。
 
+適用方法は2つあります。OpenChamber の拡張機能パネルからボタンで適用するか、PowerShell を直接実行します。
+
 An unofficial skin for the [OpenChamber](https://openchamber.dev) desktop app: a full-screen background image with
 translucent panels, implemented by patching the packaged renderer (`web-dist`).
 
@@ -14,6 +16,8 @@ OpenChamber のテーマ（`~/.config/openchamber/themes/*.json`）は色・フ�
 色の検証が `url(` / `image(` / `@import` を明示的に拒否します。そのため画像をテーマに入れることはできません。
 
 この MOD は代わりに、ビルド済みレンダラへ CSS を 1 枚足します。
+
+拡張機能版では、この処理をパネルからローカルサービス経由で `install.ps1` / `uninstall.ps1` に渡します。MOD のロジックは PowerShell 側にだけあり、JavaScript で二重実装していません。
 
 1. `mod.css` と画像を `<app>\resources\web-dist\assets\` にコピー
 2. `web-dist\index.html` の `</head>` 直前に `<link rel="stylesheet">` を 1 行追加
@@ -27,13 +31,39 @@ OpenChamber のテーマ（`~/.config/openchamber/themes/*.json`）は色・フ�
 `:root:root` はテーマ側の `:root` より詳細度が高いので、テーマの `!important` にも勝てます。
 テーマファイル自体は変更しないため、テーマを切り替えても背景は維持されます。
 
+## 拡張機能として使う
+
+このリポジトリは、そのまま OpenChamber の拡張機能パッケージになっています。
+パネルの「適用」「解除」は、ローカルサービス経由で `install.ps1` / `uninstall.ps1` を実行するだけです。
+
+1. OpenChamber の **Settings → Extensions** を開く
+2. Git URL か、このリポジトリのフォルダ（絶対パス）を追加
+   - Git URL: `https://github.com/denpadokei/openchamber-itachou-mod.git`
+   - まだ push していない変更を試す場合は、Git URL ではなくフォルダを指定してください。
+     Git URL は `package.json` / `panel/` / `service/` が origin に push された後で使えます。
+3. 権限ダイアログのローカルサービス（PowerShell の実行）を承認する
+   — ユーザー権限でプロセスを起動するため、フルアクセスの警告が出ます
+4. 右レールの **痛PC MOD** を開く
+5. 背景画像の絶対パス（jpg / jpeg / png / webp）を入れて **適用**
+6. OpenChamber で `Ctrl+R`
+
+画像を空欄にすると、パッケージ内の `bg.jpg` を使います。Git から入れた場合は `bg.jpg` が含まれないので、必ずパスを指定してください。
+最後に使ったパスは拡張のデータフォルダに保存され、次に開いたときに復元されます。
+
+アプリを更新すると `web-dist` が置き換わり MOD は消えます。更新後にパネルを開いてもう一度「適用」してください
+（`apply-on-launch.ps1` をショートカットにしている場合は、そちらでも復元できます）。
+
+> 拡張機能は OpenChamber のデスクトップ版 / Web サーバー版で動きます。VS Code とモバイルでは読み込まれません。
+
 ## 必要なもの
 
 - Windows
 - OpenChamber デスクトップ版（既定のインストール先を自動検出します）
 - PowerShell 5.1 以降（7 推奨）
 
-## 使い方
+## PowerShell から使う
+
+拡張機能を使わず、直接スクリプトを実行する場合です。
 
 ```powershell
 git clone https://github.com/denpadokei/openchamber-itachou-mod.git
@@ -92,7 +122,36 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File "<path>\apply-on-launch.ps1"
 - アプリの内部 CSS 変数に依存しているため、将来のバージョンで効かなくなる可能性があります。
 - `web-dist\index.html` の初回バックアップは `index.html.itachou-backup` に残ります。
 - アンインストールは `uninstall.ps1`。OS やユーザーデータには影響しません。
+- 拡張機能のローカルサービスは、ユーザー権限のフルアクセスで動きます。個人利用を前提にしてください。
+- 適用後の `Ctrl+R` はサービスから自動化できません。手動でリロードしてください。
 - 同梱していない背景画像の権利は、利用者自身で確認してください。
+
+## 開発
+
+拡張機能パッケージとしての構成と確認方法です。
+
+```powershell
+npm install
+npm run build   # panel/main.src.js -> panel/main.js
+npm run check   # service/main.js と panel/main.js の構文チェック
+npm test        # 一時フォルダの web-dist に対して適用/解除を実行
+```
+
+`npm test` は実際の OpenChamber には触れません。一時フォルダにダミーの `web-dist` を作り、サービス経由で `install.ps1` / `uninstall.ps1` を実行して、マーカー・CSS・画像・冪等性・解除を確認します。
+
+パッケージ全体の検証（Bun が必要）:
+
+```powershell
+bun node_modules/@openchamber/sdk/scripts/check-guest.ts .
+```
+
+| パス | 役割 |
+| --- | --- |
+| `package.json` | 拡張のマニフェスト（`openchamber` ブロック） |
+| `panel/` | 右レールの UI。`main.js` は esbuild のビルド成果物で、コミット対象 |
+| `service/main.js` | PowerShell を呼ぶローカルサービス。固定の `/health` `/status` `/apply` `/uninstall` `/log` だけを公開 |
+| `install.ps1` / `uninstall.ps1` | MOD 本体。拡張はこれを呼ぶだけ |
+| `scripts/selftest.mjs` | `npm test` の実体 |
 
 ## License
 

@@ -4,6 +4,9 @@ bg.png
 bg.jpeg
 bg.webp
 
+# extension build dependencies (panel/main.js is committed)
+node_modules/
+
 # backups created by install.ps1 inside web-dist are outside this repo,
 # but keep stray copies out anyway
 *.itachou-backup

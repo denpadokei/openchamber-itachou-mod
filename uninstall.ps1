@@ -20,6 +20,12 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
+# See install.ps1: keep Japanese output readable when the extension service
+# captures it through a pipe instead of a console.
+if ([Console]::IsOutputRedirected) {
+    $OutputEncoding = [Console]::OutputEncoding = [System.Text.UTF8Encoding]::new()
+}
+
 $Marker = '<!-- itachou-mod -->'
 $CssName = 'itachou.css'
 $BgName = 'itachou-bg.jpg'
