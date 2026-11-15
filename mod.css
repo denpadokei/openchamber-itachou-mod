@@ -102,9 +102,14 @@ body::after {
   background-size: var(--itachou-stream-width) 100%;
 }
 
-/* The "wide chat" layout widens the column to 64rem. */
-.wide-chat-layout .chat-scroll {
+/* The chat width setting widens the column: "wider" = 64rem, "full" = no cap.
+   (Older builds used a .wide-chat-layout class instead of this attribute.) */
+[data-chat-width="wider"] .chat-scroll {
   background-size: min(100%, 64rem) 100%;
+}
+
+[data-chat-width="full"] .chat-scroll {
+  background-size: 100% 100%;
 }
 
 /* ---------------------------------------------------------------------------
