@@ -79,6 +79,7 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File "<path>\apply-on-launch.ps1"
 | `--itachou-stream` | メッセージ領域だけに敷くパネルの濃さ（既定 `rgba(10, 5, 14, 0.8)`） |
 | `--itachou-stream-width` | そのパネルの幅（既定 `min(100%, 48rem)`。`100%` で全幅） |
 | `--itachou-panel` / `--itachou-panel-soft` | パネルの透け具合 |
+| `--itachou-dialog` | 設定ダイアログの地色（不透明。既定 `#1a0e20`） |
 | `--itachou-muted` | 補助テキスト（ツール行・所要時間など）の明るさ。読みにくければ上げる |
 | `--itachou-bubble` | ユーザーメッセージの色 |
 | `--itachou-accent` 系 | アクセント色（既定 `#ff6fb5`。シアンなら `#6fd6ff`） |

@@ -54,6 +54,10 @@
   --itachou-panel-soft: rgba(14, 8, 20, 0.55);
   --itachou-panel-subtle: rgba(20, 11, 26, 0.6);
 
+  /* Opaque surface for the settings dialog. It holds long forms and lists, so
+     unlike the other panels the photo does not show through it. */
+  --itachou-dialog: #1a0e20;
+
   /* User message bubble. */
   --itachou-bubble: rgba(255, 110, 190, 0.2);
 
@@ -92,9 +96,9 @@ body::after {
 }
 
 /* The message stream gets its own dark panel, so the photo stays visible
-   everywhere else: sidebar, composer, empty space, dialogs. Painted as a
-   background band rather than a background colour, so it can be narrower than
-   the stream itself; the band stays put while the messages scroll over it. */
+   everywhere else: sidebar, composer, empty space. Painted as a background
+   band rather than a background colour, so it can be narrower than the stream
+   itself; the band stays put while the messages scroll over it. */
 .chat-scroll {
   background-image: linear-gradient(var(--itachou-stream), var(--itachou-stream));
   background-repeat: no-repeat;
@@ -142,6 +146,18 @@ body::after {
   --primary-active: var(--itachou-accent-active) !important;
   --primary-muted: var(--itachou-accent-soft) !important;
   --primary-foreground: var(--itachou-accent-ink) !important;
+}
+
+/* ---------------------------------------------------------------------------
+   Opaque surfaces.
+
+   --background is transparent, so every panel that paints with bg-background
+   lets the photo through. The settings dialog is the exception: it holds long
+   forms, lists and flyouts, so it gets a solid surface. Its view fills the
+   dialog window, so painting the view covers the whole dialog.
+   --------------------------------------------------------------------------- */
+[data-settings-view="true"] {
+  background-color: var(--itachou-dialog) !important;
 }
 
 /* ---------------------------------------------------------------------------
