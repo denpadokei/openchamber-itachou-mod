@@ -3,11 +3,11 @@
   var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
   var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
-  // node_modules/@openchamber/sdk/dist/api-version.js
+  // ../../../../../../source/repos/openchamber-itachou-mod/node_modules/@openchamber/sdk/dist/api-version.js
   var OPENCHAMBER_SDK_CHANNEL = "openchamber.sdk";
   var OPENCHAMBER_SDK_API_VERSION = 1;
 
-  // node_modules/@openchamber/sdk/dist/scrollbar-style.js
+  // ../../../../../../source/repos/openchamber-itachou-mod/node_modules/@openchamber/sdk/dist/scrollbar-style.js
   var GUEST_SCROLLING_ATTRIBUTE = "data-oc-scrolling";
   var GUEST_SCROLLBAR_CSS = `
 :root {
@@ -67,15 +67,15 @@
   }
   var GUEST_SCROLLBAR_SCRIPT = `(${installGuestScrollbarActivity.toString()})(document);`;
 
-  // node_modules/@openchamber/sdk/dist/workspace.js
+  // ../../../../../../source/repos/openchamber-itachou-mod/node_modules/@openchamber/sdk/dist/workspace.js
   var GUEST_STORAGE_KEY_MAX = 128;
   var GUEST_STORAGE_VALUE_BYTES = 65536;
 
-  // node_modules/@openchamber/sdk/dist/shells.js
+  // ../../../../../../source/repos/openchamber-itachou-mod/node_modules/@openchamber/sdk/dist/shells.js
   var GUEST_SHELL_ID_MAX = 128;
   var GUEST_SHELL_OUTPUT_TAIL_MAX = 65536;
 
-  // node_modules/@openchamber/sdk/dist/microphone.js
+  // ../../../../../../source/repos/openchamber-itachou-mod/node_modules/@openchamber/sdk/dist/microphone.js
   var GUEST_MICROPHONE_SAMPLE_RATE_MIN = 8e3;
   var GUEST_MICROPHONE_SAMPLE_RATE_MAX = 192e3;
   var GUEST_MICROPHONE_OPEN_TIMEOUT_MS = 12e4;
@@ -121,7 +121,7 @@
     };
   };
 
-  // node_modules/@openchamber/sdk/dist/status-controls.js
+  // ../../../../../../source/repos/openchamber-itachou-mod/node_modules/@openchamber/sdk/dist/status-controls.js
   var GUEST_STATUS_CONTROLS_MAX = 4;
   var GUEST_STATUS_CONTROL_ID = /^[a-z][a-z0-9-]{0,39}$/;
   var GUEST_STATUS_CONTROL_LABEL_MAX = 60;
@@ -164,12 +164,12 @@
     return true;
   };
 
-  // node_modules/@openchamber/sdk/dist/manifest.js
+  // ../../../../../../source/repos/openchamber-itachou-mod/node_modules/@openchamber/sdk/dist/manifest.js
   var GUEST_PROVIDER_LOGO_BYTES_MAX = 1024 * 1024;
   var TRACKER_URL_TOKENS = ["{id}", "{segment}", "{segments+}"];
   var TRACKER_URL_TOKEN_SET = new Set(TRACKER_URL_TOKENS);
 
-  // node_modules/@openchamber/sdk/dist/session-events.js
+  // ../../../../../../source/repos/openchamber-itachou-mod/node_modules/@openchamber/sdk/dist/session-events.js
   var GUEST_SESSION_EVENT_TYPES = [
     "turn-finished",
     "turn-failed",
@@ -183,11 +183,11 @@
   var SESSION_EVENTS_IDLE_MS = 10 * 6e4;
   var EVENT_TYPES = new Set(GUEST_SESSION_EVENT_TYPES);
 
-  // node_modules/@openchamber/sdk/dist/service-host.js
+  // ../../../../../../source/repos/openchamber-itachou-mod/node_modules/@openchamber/sdk/dist/service-host.js
   var SERVICE_SCHEDULE_IDLE_MS = 10 * 6e4;
   var MENTIONS_IDLE_MS = 10 * 6e4;
 
-  // node_modules/@openchamber/sdk/dist/file-editor.js
+  // ../../../../../../source/repos/openchamber-itachou-mod/node_modules/@openchamber/sdk/dist/file-editor.js
   var GUEST_FILE_EDITOR_CONTENT_MAX = 2e7;
   var GUEST_FILE_EDITOR_VERSION_MAX = 256;
   var fileEditorPayloadSize = (value) => "bytes" in value ? value.bytes.byteLength : value.content.length;
@@ -206,7 +206,7 @@
     return true;
   };
 
-  // node_modules/@openchamber/sdk/dist/popover.js
+  // ../../../../../../source/repos/openchamber-itachou-mod/node_modules/@openchamber/sdk/dist/popover.js
   var GUEST_POPOVER_ID = /^[A-Za-z0-9_-]{1,80}$/;
   var GUEST_POPOVER_COORDINATE_MAX = 1e5;
   var GUEST_POPOVER_WIDTH_MIN = 160;
@@ -249,7 +249,7 @@
     }
   };
 
-  // node_modules/@openchamber/sdk/dist/contract.js
+  // ../../../../../../source/repos/openchamber-itachou-mod/node_modules/@openchamber/sdk/dist/contract.js
   var GUEST_BLOCK_ANSWER_MAX = 2e3;
   var GUEST_FILE_STAT_KINDS = ["file", "directory", "other", "missing"];
   var isStartSessionResult = (value) => Boolean(value && "sessionId" in value);
@@ -468,7 +468,7 @@
     return wire;
   };
 
-  // node_modules/@openchamber/sdk/dist/host.js
+  // ../../../../../../source/repos/openchamber-itachou-mod/node_modules/@openchamber/sdk/dist/host.js
   var isKeyEvent = (event) => "key" in event && "metaKey" in event && "ctrlKey" in event;
   var isSaveShortcut = (event) => (event.metaKey || event.ctrlKey) && !event.altKey && !event.shiftKey && event.key.toLowerCase() === "s";
   var HostRequestError = class extends Error {
@@ -1554,7 +1554,7 @@
     };
   };
 
-  // node_modules/@openchamber/sdk/dist/service-providers.js
+  // ../../../../../../source/repos/openchamber-itachou-mod/node_modules/@openchamber/sdk/dist/service-providers.js
   var BROWSER_CONTROL_ACTIONS = [
     "browser.open",
     "browser.snapshot",
@@ -1576,7 +1576,7 @@
   var TRACKER_PROVIDER_IDLE_MS = 10 * 6e4;
   var QUOTA_PROVIDER_IDLE_MS = 10 * 6e4;
 
-  // node_modules/@openchamber/sdk/dist/service-surface.js
+  // ../../../../../../source/repos/openchamber-itachou-mod/node_modules/@openchamber/sdk/dist/service-surface.js
   var SURFACE_CONTROLLERS = ["none", "agent", "user"];
   var CONTROLLERS = new Set(SURFACE_CONTROLLERS);
 
@@ -1599,6 +1599,7 @@
   var host = null;
   var status = null;
   var busy = false;
+  var statusLoaded = false;
   try {
     host = connectHost();
   } catch (error) {
@@ -1630,6 +1631,10 @@
   async function run(action) {
     if (!host || busy) return;
     const image = els.image.value.trim();
+    if (action === "apply" && !status) {
+      toast("\u30ED\u30FC\u30AB\u30EB\u30B5\u30FC\u30D3\u30B9\u306B\u63A5\u7D9A\u3067\u304D\u3066\u3044\u307E\u305B\u3093\u3002\u518D\u78BA\u8A8D\u3057\u3066\u304B\u3089\u5B9F\u884C\u3057\u3066\u304F\u3060\u3055\u3044\u3002", "error");
+      return;
+    }
     if (action === "apply" && !image && !(status && status.bundledImage)) {
       toast("\u80CC\u666F\u753B\u50CF\u306E\u7D76\u5BFE\u30D1\u30B9\u3092\u5165\u529B\u3057\u3066\u304F\u3060\u3055\u3044\u3002", "error");
       els.image.focus();
@@ -1643,6 +1648,9 @@
       logged = true;
       if (!data.ok) {
         throw new Error(data.error || data.stderr || "\u51E6\u7406\u306B\u5931\u6557\u3057\u307E\u3057\u305F\u3002");
+      }
+      if (action === "apply" && data.status && !data.status.installed) {
+        throw new Error("\u30B9\u30AF\u30EA\u30D7\u30C8\u306F\u7D42\u4E86\u3057\u307E\u3057\u305F\u304C\u3001\u9069\u7528\u72B6\u614B\u3092\u78BA\u8A8D\u3067\u304D\u307E\u305B\u3093\u3067\u3057\u305F\uFF08marker/css/background \u306E\u3044\u305A\u308C\u304B\u304C\u4E0D\u8DB3\uFF09\u3002\u5B9F\u884C\u30ED\u30B0\u3092\u78BA\u8A8D\u3057\u3066\u304F\u3060\u3055\u3044\u3002");
       }
       toast(
         action === "apply" ? "\u9069\u7528\u3057\u307E\u3057\u305F\u3002Ctrl+R \u3067\u53CD\u6620\u3055\u308C\u307E\u3059\u3002" : "\u89E3\u9664\u3057\u307E\u3057\u305F\u3002Ctrl+R \u3067\u53CD\u6620\u3055\u308C\u307E\u3059\u3002",
@@ -1670,7 +1678,9 @@
       }
     }
     if (result && result.status >= 400) {
-      throw new Error(data && data.error || `HTTP ${result.status}`);
+      const hasBody = Boolean(result.body && String(result.body).trim());
+      const fallback = hasBody ? `HTTP ${result.status}` : `HTTP ${result.status}\uFF08\u5FDC\u7B54\u672C\u6587\u304C\u3042\u308A\u307E\u305B\u3093\uFF09`;
+      throw new Error(data && data.error || fallback);
     }
     return data && typeof data === "object" ? data : {};
   }
@@ -1678,8 +1688,11 @@
     const s = status;
     if (!s) return;
     clearNotice();
-    if (s.lastImage && !els.image.value.trim()) {
-      els.image.value = s.lastImage;
+    if (!statusLoaded) {
+      statusLoaded = true;
+      if (s.lastImage && !els.image.value.trim()) {
+        els.image.value = s.lastImage;
+      }
     }
     els.state.textContent = s.installed ? "\u9069\u7528\u6E08\u307F" : s.marker || s.css || s.background ? "\u672A\u5B8C\u4E86\uFF08\u4E00\u90E8\u306E\u307F\uFF09" : "\u672A\u9069\u7528";
     setBadge(s.installed ? "success" : "neutral", s.installed ? "\u9069\u7528\u6E08\u307F" : "\u672A\u9069\u7528");
@@ -1688,13 +1701,21 @@
     els.bundled.textContent = s.bundledImage ? "bg.jpg \u3042\u308A" : "\u306A\u3057";
     els.powershell.textContent = s.powershellName || "\u898B\u3064\u304B\u308A\u307E\u305B\u3093";
     els.powershell.title = s.powershell || "";
-    els.imageHint.textContent = s.bundledImage ? "\u7A7A\u6B04\u306A\u3089\u30D1\u30C3\u30B1\u30FC\u30B8\u5185\u306E bg.jpg \u3092\u4F7F\u3044\u307E\u3059\uFF08jpg / png / webp\uFF09\u3002" : "\u30D1\u30C3\u30B1\u30FC\u30B8\u306B bg.jpg \u304C\u3042\u308A\u307E\u305B\u3093\u3002jpg / png / webp \u306E\u7D76\u5BFE\u30D1\u30B9\u3092\u5165\u529B\u3057\u3066\u304F\u3060\u3055\u3044\u3002";
+    els.imageHint.textContent = s.bundledImage ? "\u7A7A\u6B04\u306A\u3089\u30D1\u30C3\u30B1\u30FC\u30B8\u5185\u306E bg.jpg \u3092\u4F7F\u3044\u307E\u3059\uFF08jpg / jpeg / png / webp\uFF09\u3002" : "\u30D1\u30C3\u30B1\u30FC\u30B8\u306B bg.jpg \u304C\u3042\u308A\u307E\u305B\u3093\u3002jpg / jpeg / png / webp \u306E\u7D76\u5BFE\u30D1\u30B9\u3092\u5165\u529B\u3057\u3066\u304F\u3060\u3055\u3044\u3002";
     if (!s.webDist) {
       showNotice("warning", "OpenChamber \u306E web-dist \u304C\u898B\u3064\u304B\u308A\u307E\u305B\u3093\u3002\u30A4\u30F3\u30B9\u30C8\u30FC\u30EB\u5148\u3092\u78BA\u8A8D\u3057\u3066\u304F\u3060\u3055\u3044\u3002");
     } else if (!s.powershell) {
       showNotice("error", "PowerShell \u304C\u898B\u3064\u304B\u308A\u307E\u305B\u3093\u3002pwsh \u307E\u305F\u306F powershell \u3092 PATH \u306B\u901A\u3057\u3066\u304F\u3060\u3055\u3044\u3002");
     } else if (!s.scripts || !s.scripts.install) {
       showNotice("error", "install.ps1 \u304C\u30D1\u30C3\u30B1\u30FC\u30B8\u5185\u306B\u898B\u3064\u304B\u308A\u307E\u305B\u3093\u3002");
+    } else if (s.settingsError) {
+      showNotice("warning", `\u8A2D\u5B9A\u306E\u8AAD\u307F\u8FBC\u307F\u306B\u5931\u6557\u3057\u307E\u3057\u305F: ${s.settingsError}`);
+    } else if (s.readError) {
+      showNotice("warning", `\u9069\u7528\u72B6\u614B\u306E\u8AAD\u307F\u8FBC\u307F\u306B\u5931\u6557\u3057\u307E\u3057\u305F: ${s.readError}`);
+    } else if (s.logOk === false) {
+      showNotice("warning", "\u5B9F\u884C\u30ED\u30B0\u3092\u53D6\u5F97\u3067\u304D\u307E\u305B\u3093\u3067\u3057\u305F\u3002");
+    } else if (s.webDistSource === "fallback") {
+      showNotice("warning", "web-dist \u306E\u81EA\u52D5\u691C\u51FA\u306B\u5931\u6557\u3057\u305F\u305F\u3081\u3001\u4EE3\u66FF\u30D1\u30B9\u3092\u4F7F\u7528\u3057\u3066\u3044\u307E\u3059\u3002");
     }
     updateActions();
   }
@@ -1728,7 +1749,10 @@
     if (data && data.stdout && data.stdout.trim()) lines.push(data.stdout.trim());
     if (data && data.stderr && data.stderr.trim()) lines.push(data.stderr.trim());
     if (data && typeof data.exitCode === "number") {
-      lines.push(`exit ${data.exitCode}${data.timedOut ? "\uFF08\u30BF\u30A4\u30E0\u30A2\u30A6\u30C8\uFF09" : ""}`);
+      lines.push(`exit ${data.exitCode}`);
+    }
+    if (data && data.timedOut) {
+      lines.push("\u30BF\u30A4\u30E0\u30A2\u30A6\u30C8\uFF08180 \u79D2\uFF09\u3067\u5F37\u5236\u7D42\u4E86\u3057\u307E\u3057\u305F\u3002");
     }
     if (lines.length === 0) return;
     els.log.textContent = lines.join("\n\n").slice(-8e3);
@@ -1749,8 +1773,14 @@
     els.notice.textContent = "";
   }
   function toast(message, kind) {
-    if (!host) return;
+    const tone = kind === "error" ? "error" : "warning";
+    if (!host) {
+      showNotice(tone, message);
+      return;
+    }
     host.toast({ kind, message }).catch(() => {
+      showNotice(tone, message);
+      if (kind === "error") showLog({ error: message });
     });
   }
   function applyTheme(theme) {

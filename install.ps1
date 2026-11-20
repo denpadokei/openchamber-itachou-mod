@@ -119,12 +119,12 @@ $version = $cssHash.Substring(0, 6).ToLowerInvariant() + $bgHash.Substring(0, 6)
 
 Copy-Item $bgSource (Join-Path $assets $BgName) -Force
 
-$css = Get-Content -LiteralPath $cssSource -Raw
+$css = Get-Content -LiteralPath $cssSource -Raw -Encoding UTF8
 $css = $css -replace "($([regex]::Escape($BgName)))(?!\?v=)", "`$1?v=$($bgHash.Substring(0, 10).ToLowerInvariant())"
 Set-Content -LiteralPath (Join-Path $assets $CssName) -Value $css -Encoding utf8 -NoNewline
 
 $indexPath = Join-Path $WebDist 'index.html'
-$html = Get-Content -LiteralPath $indexPath -Raw
+$html = Get-Content -LiteralPath $indexPath -Raw -Encoding UTF8
 
 # ${...} matters: "$CssName?v" would be parsed as one (empty) variable name.
 $snippet = "$Marker`r`n  <link rel=`"stylesheet`" href=`"/assets/${CssName}?v=${version}`" />`r`n"

@@ -19,6 +19,7 @@ const els = {
 let host = null;
 let status = null;
 let busy = false;
+let statusLoaded = false;
 
 try {
   host = connectHost();
@@ -58,6 +59,10 @@ async function run(action) {
   if (!host || busy) return;
 
   const image = els.image.value.trim();
+  if (action === "apply" && !status) {
+    toast("ローカルサービスに接続できていません。再確認してから実行してください。", "error");
+    return;
+  }
   if (action === "apply" && !image && !(status && status.bundledImage)) {
     toast("背景画像の絶対パスを入力してください。", "error");
     els.image.focus();
@@ -75,6 +80,9 @@ async function run(action) {
     logged = true;
     if (!data.ok) {
       throw new Error(data.error || data.stderr || "処理に失敗しました。");
+    }
+    if (action === "apply" && data.status && !data.status.installed) {
+      throw new Error("スクリプトは終了しましたが、適用状態を確認できませんでした（marker/css/background のいずれかが不足）。実行ログを確認してください。");
     }
 
     toast(
@@ -109,7 +117,11 @@ async function call(method, path, body) {
   }
 
   if (result && result.status >= 400) {
-    throw new Error((data && data.error) || `HTTP ${result.status}`);
+    const hasBody = Boolean(result.body && String(result.body).trim());
+    const fallback = hasBody
+      ? `HTTP ${result.status}`
+      : `HTTP ${result.status}（応答本文がありません）`;
+    throw new Error((data && data.error) || fallback);
   }
 
   return data && typeof data === "object" ? data : {};
@@ -121,8 +133,11 @@ function renderStatus() {
 
   clearNotice();
 
-  if (s.lastImage && !els.image.value.trim()) {
-    els.image.value = s.lastImage;
+  if (!statusLoaded) {
+    statusLoaded = true;
+    if (s.lastImage && !els.image.value.trim()) {
+      els.image.value = s.lastImage;
+    }
   }
 
   els.state.textContent = s.installed
@@ -140,8 +155,8 @@ function renderStatus() {
   els.powershell.title = s.powershell || "";
 
   els.imageHint.textContent = s.bundledImage
-    ? "空欄ならパッケージ内の bg.jpg を使います（jpg / png / webp）。"
-    : "パッケージに bg.jpg がありません。jpg / png / webp の絶対パスを入力してください。";
+    ? "空欄ならパッケージ内の bg.jpg を使います（jpg / jpeg / png / webp）。"
+    : "パッケージに bg.jpg がありません。jpg / jpeg / png / webp の絶対パスを入力してください。";
 
   if (!s.webDist) {
     showNotice("warning", "OpenChamber の web-dist が見つかりません。インストール先を確認してください。");
@@ -149,6 +164,14 @@ function renderStatus() {
     showNotice("error", "PowerShell が見つかりません。pwsh または powershell を PATH に通してください。");
   } else if (!s.scripts || !s.scripts.install) {
     showNotice("error", "install.ps1 がパッケージ内に見つかりません。");
+  } else if (s.settingsError) {
+    showNotice("warning", `設定の読み込みに失敗しました: ${s.settingsError}`);
+  } else if (s.readError) {
+    showNotice("warning", `適用状態の読み込みに失敗しました: ${s.readError}`);
+  } else if (s.logOk === false) {
+    showNotice("warning", "実行ログを取得できませんでした。");
+  } else if (s.webDistSource === "fallback") {
+    showNotice("warning", "web-dist の自動検出に失敗したため、代替パスを使用しています。");
   }
 
   updateActions();
@@ -188,7 +211,10 @@ function showLog(data) {
   if (data && data.stdout && data.stdout.trim()) lines.push(data.stdout.trim());
   if (data && data.stderr && data.stderr.trim()) lines.push(data.stderr.trim());
   if (data && typeof data.exitCode === "number") {
-    lines.push(`exit ${data.exitCode}${data.timedOut ? "（タイムアウト）" : ""}`);
+    lines.push(`exit ${data.exitCode}`);
+  }
+  if (data && data.timedOut) {
+    lines.push("タイムアウト（180 秒）で強制終了しました。");
   }
   if (lines.length === 0) return;
 
@@ -214,8 +240,15 @@ function clearNotice() {
 }
 
 function toast(message, kind) {
-  if (!host) return;
-  host.toast({ kind, message }).catch(() => {});
+  const tone = kind === "error" ? "error" : "warning";
+  if (!host) {
+    showNotice(tone, message);
+    return;
+  }
+  host.toast({ kind, message }).catch(() => {
+    showNotice(tone, message);
+    if (kind === "error") showLog({ error: message });
+  });
 }
 
 function applyTheme(theme) {

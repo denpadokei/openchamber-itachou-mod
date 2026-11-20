@@ -35,9 +35,16 @@ const BG_NAME = "itachou-bg.jpg";
 const MAX_BODY = 1_000_000;
 const MAX_OUTPUT = 64 * 1024;
 const SCRIPT_TIMEOUT_MS = 180_000;
+const KILL_GRACE_MS = 5_000;
+const MAX_LOG_BYTES = 512 * 1024;
+const LOG_TAIL_BYTES = 256 * 1024;
 const IMAGE_EXTENSIONS = new Set([".jpg", ".jpeg", ".png", ".webp"]);
 
 let busy = false;
+let runningChild = null;
+let logOk = true;
+let stderrFallbackUsed = false;
+let lastSettingsError = null;
 
 if (!PORT || !TOKEN) {
   log("missing OPENCHAMBER_SERVICE_PORT or OPENCHAMBER_SERVICE_TOKEN; exiting");
@@ -48,7 +55,11 @@ const server = http.createServer((req, res) => {
   handle(req, res).catch((error) => {
     log(`unhandled: ${error && error.stack ? error.stack : error}`);
     const status = Number(error && error.status) || 500;
-    sendJson(res, status, { ok: false, error: errorMessage(error) });
+    try {
+      sendJson(res, status, { ok: false, error: errorMessage(error) });
+    } catch (sendError) {
+      log(`could not send the error response: ${errorMessage(sendError)}`);
+    }
   });
 });
 
@@ -63,18 +74,28 @@ server.on("error", (error) => {
 
 for (const signal of ["SIGTERM", "SIGINT"]) {
   process.on(signal, () => {
+    log(`received ${signal}; shutting down`);
+    const child = runningChild;
+    if (child && child.exitCode === null) {
+      try {
+        if (!child.kill()) log(`could not signal PowerShell (pid ${child.pid}) on ${signal}`);
+      } catch (error) {
+        log(`could not stop PowerShell on ${signal}: ${errorMessage(error)}`);
+      }
+    }
     server.close(() => process.exit(0));
     setTimeout(() => process.exit(0), 2000).unref();
   });
 }
 
 async function handle(req, res) {
+  const url = new URL(req.url || "/", "http://127.0.0.1");
+
   if (!isAuthorized(req)) {
+    log(`unauthorized ${req.method} ${url.pathname}`);
     sendJson(res, 401, { ok: false, error: "unauthorized" });
     return;
   }
-
-  const url = new URL(req.url || "/", "http://127.0.0.1");
 
   if (req.method === "GET" && url.pathname === "/health") {
     sendJson(res, 200, { ok: true, version: VERSION });
@@ -118,29 +139,35 @@ function isAuthorized(req) {
 function readBody(req) {
   return new Promise((resolve, reject) => {
     let raw = "";
+    let tooLarge = false;
     req.setEncoding("utf8");
     req.on("data", (chunk) => {
+      if (tooLarge) return;
       raw += chunk;
       if (raw.length > MAX_BODY) {
+        tooLarge = true;
+        raw = "";
+        // Drain instead of destroying so the 413 response can still be sent.
+        req.resume();
         reject(httpError(413, "リクエストが大きすぎます。"));
-        req.destroy();
       }
     });
     req.on("end", () => {
+      if (tooLarge) return;
       if (!raw.trim()) {
         resolve({});
         return;
       }
       try {
         let value = JSON.parse(raw);
-        // The host forwards the guest's `body` string as-is. Accept a second
-        // JSON layer too, in case a proxy serializes the payload once more.
+        // The host forwards the guest's `body` string as-is, and a proxy may
+        // serialize the payload once more. Unwrap a few string layers, but
+        // never silently accept a body that cannot be parsed.
+        for (let depth = 0; typeof value === "string" && depth < 4; depth += 1) {
+          value = JSON.parse(value);
+        }
         if (typeof value === "string") {
-          try {
-            value = JSON.parse(value);
-          } catch {
-            // Keep the plain string; the route will treat it as no options.
-          }
+          throw httpError(400, "リクエストの JSON を読めません。");
         }
         resolve(value && typeof value === "object" ? value : {});
       } catch {
@@ -164,15 +191,14 @@ async function apply(body) {
   if (image && !IMAGE_EXTENSIONS.has(path.extname(image).toLowerCase())) {
     throw httpError(400, "背景画像は .jpg / .jpeg / .png / .webp を指定してください。");
   }
-  if (image && !fs.existsSync(image)) {
-    throw httpError(400, `背景画像が見つかりません: ${image}`);
-  }
   if (image) {
     let stat = null;
     try {
       stat = fs.statSync(image);
-    } catch {
-      throw httpError(400, `背景画像が見つかりません: ${image}`);
+    } catch (error) {
+      const code = error && error.code ? error.code : "UNKNOWN";
+      log(`could not read background image ${image}: ${code} ${errorMessage(error)}`);
+      throw httpError(400, `背景画像を読み取れません: ${image}（${code}）`);
     }
     if (!stat.isFile()) {
       throw httpError(400, `背景画像がファイルではありません: ${image}`);
@@ -191,10 +217,11 @@ async function apply(body) {
   if (image) args.push("-Image", image);
 
   const result = await runScript("install.ps1", args);
+  let settingsSaved = false;
   if (result.ok) {
-    saveSettings({ image: image || null, webDist });
+    settingsSaved = saveSettings({ image: image || null, webDist });
   }
-  return { ...result, status: inspectWebDist(webDist) };
+  return { ...result, settingsSaved, status: inspectWebDist(webDist) };
 }
 
 async function uninstall(body) {
@@ -236,11 +263,19 @@ function runScript(scriptName, args) {
         env: process.env,
       },
     );
+    runningChild = child;
 
     let stdout = "";
     let stderr = "";
     let timedOut = false;
     let settled = false;
+    let killTimer = null;
+
+    function clearTimers() {
+      clearTimeout(timer);
+      if (killTimer) clearTimeout(killTimer);
+      if (runningChild === child) runningChild = null;
+    }
 
     child.stdout.setEncoding("utf8");
     child.stderr.setEncoding("utf8");
@@ -253,13 +288,27 @@ function runScript(scriptName, args) {
 
     const timer = setTimeout(() => {
       timedOut = true;
-      child.kill();
+      if (!child.kill()) {
+        log(`could not signal ${scriptName} (pid ${child.pid}); waiting for exit`);
+      }
+      // A killed child still has to report `close`; if it never does, stop
+      // waiting so `busy` cannot stay stuck and every later call gets a 409.
+      killTimer = setTimeout(() => {
+        if (settled) return;
+        settled = true;
+        clearTimers();
+        busy = false;
+        logRun(scriptName, args, null, true, stdout, stderr);
+        log(`${scriptName} did not exit after kill; giving up`);
+        reject(httpError(504, "PowerShell が応答しません。"));
+      }, KILL_GRACE_MS);
+      killTimer.unref();
     }, SCRIPT_TIMEOUT_MS);
 
     child.on("error", (error) => {
       if (settled) return;
       settled = true;
-      clearTimeout(timer);
+      clearTimers();
       busy = false;
       logRun(scriptName, args, null, false, stdout, stderr);
       reject(httpError(500, `PowerShell を起動できません: ${error.message}`));
@@ -268,11 +317,11 @@ function runScript(scriptName, args) {
     child.on("close", (code) => {
       if (settled) return;
       settled = true;
-      clearTimeout(timer);
+      clearTimers();
       busy = false;
       const ok = code === 0 && !timedOut;
       logRun(scriptName, args, code, timedOut, stdout, stderr);
-      resolve({
+      const payload = {
         ok,
         exitCode: code,
         timedOut,
@@ -281,17 +330,28 @@ function runScript(scriptName, args) {
         stderr: tail(stderr),
         script: scriptName,
         powershell,
-      });
+      };
+      if (!ok) payload.error = timedOut ? "タイムアウト" : `exit ${code}`;
+      resolve(payload);
     });
   });
 }
 
 function statusPayload() {
   const saved = readSettings();
+  const settingsError = lastSettingsError;
   let webDist = null;
-  try {
-    webDist = resolveWebDist(saved.webDist || null);
-  } catch {
+  let webDistSource = "auto";
+  if (saved.webDist) {
+    try {
+      webDist = resolveWebDist(saved.webDist);
+      webDistSource = "saved";
+    } catch (error) {
+      log(`discarding saved webDist ${saved.webDist}: ${errorMessage(error)}`);
+      webDist = resolveWebDist(null);
+      webDistSource = "fallback";
+    }
+  } else {
     webDist = resolveWebDist(null);
   }
 
@@ -300,6 +360,7 @@ function statusPayload() {
     version: VERSION,
     platform: process.platform,
     webDist,
+    webDistSource,
     ...inspectWebDist(webDist),
     bundledImage: fs.existsSync(path.join(PACKAGE_ROOT, "bg.jpg")),
     lastImage: typeof saved.image === "string" && saved.image ? saved.image : null,
@@ -311,19 +372,30 @@ function statusPayload() {
     },
     dataDir: DATA_DIR,
     logPath: logPath(),
+    logOk,
+    settingsError,
   };
 }
 
 function inspectWebDist(webDist) {
   if (!webDist) {
-    return { webDist: null, marker: false, css: false, background: false, installed: false };
+    return {
+      webDist: null,
+      marker: false,
+      css: false,
+      background: false,
+      installed: false,
+      readError: null,
+    };
   }
 
   let html = "";
+  let readError = null;
   try {
     html = fs.readFileSync(path.join(webDist, "index.html"), "utf8");
-  } catch {
-    html = "";
+  } catch (error) {
+    const code = error && error.code ? error.code : "UNKNOWN";
+    readError = `${code}: ${errorMessage(error)}`;
   }
 
   const marker = html.includes(MARKER);
@@ -336,6 +408,7 @@ function inspectWebDist(webDist) {
     css,
     background,
     installed: marker && css && background,
+    readError,
   };
 }
 
@@ -359,11 +432,14 @@ function resolveWebDist(explicit) {
 // auto-detected install.
 function resolveForWrite(requestedWebDist, saved) {
   if (requestedWebDist) return resolveWebDist(requestedWebDist);
-  try {
-    return resolveWebDist(saved.webDist || null);
-  } catch {
-    return resolveWebDist(null);
+  if (saved.webDist) {
+    try {
+      return resolveWebDist(saved.webDist);
+    } catch (error) {
+      log(`discarding saved webDist ${saved.webDist}: ${errorMessage(error)}`);
+    }
   }
+  return resolveWebDist(null);
 }
 
 function webDistCandidates() {
@@ -414,8 +490,17 @@ function settingsPath() {
 function readSettings() {
   try {
     const value = JSON.parse(fs.readFileSync(settingsPath(), "utf8"));
+    lastSettingsError = null;
     return value && typeof value === "object" ? value : {};
-  } catch {
+  } catch (error) {
+    const code = error && error.code ? error.code : "UNKNOWN";
+    if (code === "ENOENT") {
+      // No settings yet: first run, not a failure.
+      lastSettingsError = null;
+      return {};
+    }
+    lastSettingsError = `${code}: ${errorMessage(error)}`;
+    log(`could not read settings (${lastSettingsError})`);
     return {};
   }
 }
@@ -425,8 +510,10 @@ function saveSettings(patch) {
     fs.mkdirSync(DATA_DIR, { recursive: true });
     const next = { ...readSettings(), ...patch };
     fs.writeFileSync(settingsPath(), `${JSON.stringify(next, null, 2)}\n`, "utf8");
+    return true;
   } catch (error) {
     log(`could not save settings: ${errorMessage(error)}`);
+    return false;
   }
 }
 
@@ -446,23 +533,46 @@ function logPath() {
 function log(line) {
   try {
     fs.mkdirSync(DATA_DIR, { recursive: true });
+    trimLogIfNeeded();
     fs.appendFileSync(logPath(), `${new Date().toISOString()} ${line}\n`, "utf8");
+    logOk = true;
+  } catch (error) {
+    logOk = false;
+    // Logging must never take the service down; report the failure once.
+    if (!stderrFallbackUsed) {
+      stderrFallbackUsed = true;
+      try {
+        process.stderr.write(`itachou-mod service log unavailable: ${errorMessage(error)}\n`);
+      } catch {
+        // Nothing left to write to.
+      }
+    }
+  }
+}
+
+function trimLogIfNeeded() {
+  try {
+    if (fs.statSync(logPath()).size <= MAX_LOG_BYTES) return;
+    const content = fs.readFileSync(logPath());
+    fs.writeFileSync(logPath(), content.subarray(content.length - LOG_TAIL_BYTES));
   } catch {
-    // Logging must never take the service down.
+    // A missing or unreadable log needs no trimming.
   }
 }
 
 function readLog() {
   try {
     return tail(fs.readFileSync(logPath(), "utf8"));
-  } catch {
-    return "";
+  } catch (error) {
+    return `ログを読み取れません: ${errorMessage(error)}\n`;
   }
 }
 
 function logRun(scriptName, args, code, timedOut, stdout, stderr) {
-  const safeArgs = args.map((arg) => (path.isAbsolute(arg) ? path.basename(arg) : arg));
-  log(`${scriptName} ${safeArgs.join(" ")} -> ${code === null ? "spawn-error" : code}${timedOut ? " (timeout)" : ""}`);
+  const outcome = timedOut
+    ? `timeout${code === null ? "" : ` (exit ${code})`}`
+    : (code === null ? "spawn-error" : String(code));
+  log(`${scriptName} ${args.join(" ")} -> ${outcome}`);
   if (stdout.trim()) log(`stdout: ${tail(stdout).trim()}`);
   if (stderr.trim()) log(`stderr: ${tail(stderr).trim()}`);
 }

@@ -16,6 +16,9 @@ const token = "selftest-token";
 let child;
 let exitCode = 0;
 const results = [];
+// Hoisted so waitForHealth can report the real crash reason.
+let stdout = "";
+let stderr = "";
 
 function check(name, ok, detail = "") {
   results.push({ name, ok: Boolean(ok) });
@@ -54,8 +57,15 @@ async function request(port, method, requestPath, body, auth = true) {
   return { status: response.status, text, json };
 }
 
+function capturedOutput() {
+  return `\n--- stdout ---\n${stdout || "(empty)"}\n--- stderr ---\n${stderr || "(empty)"}`;
+}
+
 async function waitForHealth(port) {
   for (let attempt = 0; attempt < 100; attempt += 1) {
+    if (child && child.exitCode !== null) {
+      throw new Error(`service exited before becoming healthy (exit ${child.exitCode})${capturedOutput()}`);
+    }
     try {
       const response = await request(port, "GET", "/health");
       if (response.status === 200) return;
@@ -64,7 +74,7 @@ async function waitForHealth(port) {
     }
     await new Promise((resolve) => setTimeout(resolve, 100));
   }
-  throw new Error("service did not become healthy");
+  throw new Error(`service did not become healthy${capturedOutput()}`);
 }
 
 try {
@@ -75,7 +85,21 @@ try {
     "<!doctype html>\n<html>\n<head>\n<title>fixture</title>\n</head>\n<body>fixture</body>\n</html>\n",
     "utf8",
   );
+  // A web-dist install.ps1 must reject: no </head> to inject into.
+  const webDistNoHead = path.join(root, "web-dist-nohead");
+  fs.mkdirSync(path.join(webDistNoHead, "assets"), { recursive: true });
+  fs.writeFileSync(
+    path.join(webDistNoHead, "index.html"),
+    "<!doctype html>\n<html>\n<head>\n<title>no-head</title>\n<body>fixture</body>\n</html>\n",
+    "utf8",
+  );
   fs.writeFileSync(image, Buffer.from([0xff, 0xd8, 0xff, 0xd9]));
+
+  // Seed the saved location so /status deterministically reports the fixture
+  // instead of whatever OpenChamber happens to be installed in this machine.
+  const settingsFile = path.join(dataDir, "settings.json");
+  fs.mkdirSync(dataDir, { recursive: true });
+  fs.writeFileSync(settingsFile, `${JSON.stringify({ webDist })}\n`, "utf8");
 
   const port = await freePort();
   child = spawn(process.execPath, [path.join(repo, "service", "main.js")], {
@@ -88,8 +112,6 @@ try {
     stdio: ["ignore", "pipe", "pipe"],
   });
 
-  let stdout = "";
-  let stderr = "";
   child.stdout.setEncoding("utf8");
   child.stderr.setEncoding("utf8");
   child.stdout.on("data", (chunk) => { stdout += chunk; });
@@ -102,7 +124,7 @@ try {
 
   const initial = await request(port, "GET", "/status");
   check("status answers", initial.status === 200);
-  check("status finds a web-dist", Boolean(initial.json?.webDist), initial.json?.webDist || "");
+  check("status reports the seeded web-dist", initial.json?.webDist === webDist, initial.json?.webDist || "");
   check("status finds PowerShell", Boolean(initial.json?.powershell), initial.json?.powershell || "");
   check("status sees the scripts", initial.json?.scripts?.install === true && initial.json?.scripts?.uninstall === true);
 
@@ -117,12 +139,42 @@ try {
   const markerCount = (fs.readFileSync(path.join(webDist, "index.html"), "utf8").match(/<!-- itachou-mod -->/g) || []).length;
   check("apply is idempotent", again.json?.ok === true && markerCount === 1);
 
+  // The host may forward the guest's body string as-is, which the service
+  // accepts as a second JSON layer (readBody parses it twice). request()
+  // stringifies once more, so this produces exactly two layers. Keep that
+  // documented behavior covered instead of rejecting it.
+  const doubleJsonBody = JSON.stringify({ webDist, image });
+  const doubleJson = await request(port, "POST", "/apply", doubleJsonBody);
+  check("apply accepts a double-encoded JSON body", doubleJson.status === 200 && doubleJson.json?.ok === true, doubleJson.text.slice(0, 240));
+
   const relative = await request(port, "POST", "/apply", { webDist, image: "bg.jpg" });
   check("rejects a relative image path", relative.status === 400, String(relative.status));
 
   fs.writeFileSync(path.join(root, "not-an-image.txt"), "not an image", "utf8");
   const wrongType = await request(port, "POST", "/apply", { webDist, image: path.join(root, "not-an-image.txt") });
   check("rejects a non-image extension", wrongType.status === 400, String(wrongType.status));
+
+  const missingImage = await request(port, "POST", "/apply", { webDist, image: path.join(root, "missing image.jpg") });
+  check(
+    "rejects a missing image file",
+    missingImage.status === 400 && missingImage.text.includes("背景画像"),
+    `${missingImage.status} ${missingImage.text.slice(0, 160)}`,
+  );
+
+  // The failure path must leave the working fixture alone.
+  const noHead = await request(port, "POST", "/apply", { webDist: webDistNoHead, image });
+  check("apply fails on a web-dist without </head>", noHead.status === 200 && noHead.json?.ok === false, noHead.text.slice(0, 240));
+  check("failed apply reports a non-zero exit code", typeof noHead.json?.exitCode === "number" && noHead.json.exitCode !== 0, String(noHead.json?.exitCode));
+  check("failed apply reports not installed", noHead.json?.status?.installed === false);
+  check("failed apply leaves the working fixture installed", fs.readFileSync(path.join(webDist, "index.html"), "utf8").includes("<!-- itachou-mod -->"));
+
+  // A corrupt settings file must not take the service down.
+  fs.writeFileSync(settingsFile, "{ not valid json", "utf8");
+  const corrupt = await request(port, "GET", "/status");
+  const settingsWarning = corrupt.json?.settingsError || corrupt.json?.settingsWarning || "";
+  check("status survives a corrupt settings.json", corrupt.status === 200, String(corrupt.status));
+  check("status reports the settings problem", typeof settingsWarning === "string" && settingsWarning.length > 0, String(settingsWarning));
+  fs.writeFileSync(settingsFile, `${JSON.stringify({ webDist })}\n`, "utf8");
 
   const removed = await request(port, "POST", "/uninstall", {});
   check("uninstall succeeds", removed.status === 200 && removed.json?.ok === true, removed.text.slice(0, 240));
