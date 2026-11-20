@@ -60,23 +60,45 @@ $WebDist = Resolve-WebDist -Explicit $WebDist
 $assets = Join-Path $WebDist 'assets'
 $indexPath = Join-Path $WebDist 'index.html'
 
-$html = Get-Content -LiteralPath $indexPath -Raw
+# Set when the link or one of the assets was actually removed, so the closing
+# message never claims a removal that did not happen.
+$removed = $false
+
+$html = Get-Content -LiteralPath $indexPath -Raw -Encoding UTF8
 if ($html.Contains($Marker)) {
     $pattern = [regex]::Escape($Marker) + '\s*<link[^>]*' + [regex]::Escape($CssName) + '[^>]*>\s*'
+    if ($html -notmatch $pattern) {
+        throw "itachou-mod marker found but the expected <link> markup was not recognised; index.html was left unchanged."
+    }
+
     $html = [regex]::Replace($html, $pattern, '')
+    if ($html.Contains($Marker)) {
+        throw "itachou-mod marker is still present after removing the <link>; index.html was left unchanged."
+    }
+
     Set-Content -LiteralPath $indexPath -Value $html -Encoding utf8 -NoNewline
+    $removed = $true
     Write-Host "Removed the stylesheet link from index.html."
 } else {
     Write-Host "No injected link found in index.html — nothing to remove there."
 }
 
-foreach ($name in @($CssName, $BgName)) {
-    $path = Join-Path $assets $name
-    if (Test-Path $path) {
-        Remove-Item $path -Force
-        Write-Host "Deleted assets\$name"
+if (Test-Path $assets) {
+    foreach ($name in @($CssName, $BgName)) {
+        $path = Join-Path $assets $name
+        if (Test-Path $path) {
+            Remove-Item $path -Force
+            $removed = $true
+            Write-Host "Deleted assets\$name"
+        }
     }
+} else {
+    Write-Host "No assets folder found under '$WebDist' — nothing to remove there."
 }
 
 Write-Host ""
-Write-Host "MOD removed. Reload OpenChamber (Ctrl+R) to drop the background."
+if ($removed) {
+    Write-Host "MOD removed. Reload OpenChamber (Ctrl+R) to drop the background."
+} else {
+    Write-Host "The MOD does not appear to be applied to this web-dist — nothing was removed."
+}

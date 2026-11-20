@@ -25,11 +25,12 @@ OpenChamber のテーマ（`~/.config/openchamber/themes/*.json`）は色・フ�
    キャッシュするため、内容が変われば URL も変えてキャッシュを避ける）
 3. CSS 側で背景レイヤー（`body::before`）と暗幕（`body::after`）を敷き、
    メッセージ領域には専用のパネルを敷き、
-   `:root:root { --background: transparent !important; ... }` で
+   `:root:root:root { --background: transparent !important; ... }` で
    テーマが出力する不透明な背景色を上書きする
 
-`:root:root` はテーマ側の `:root` より詳細度が高いので、テーマの `!important` にも勝てます。
-テーマファイル自体は変更しないため、テーマを切り替えても背景は維持されます。
+`:root:root:root` はテーマ側の `:root`（詳細度 0,1,0）とライトテーマの `:root:not(.dark)`（同 0,2,0）より詳細度が高いため、
+テーマの `!important` にも勝てます。テーマの `<style>` は起動時に `<head>` へ追加され、この CSS の `<link>` より後になるため、
+詳細度が同じだと後勝ちで上書きされていました（2.7.3 対応）。テーマファイル自体は変更しないため、テーマを切り替えても背景は維持されます。
 
 ## 拡張機能として使う
 

@@ -119,11 +119,15 @@ body::after {
 /* ---------------------------------------------------------------------------
    Re-point the app's design tokens at translucent colours.
 
-   The theme engine writes :root { --background: ... !important } (and the same
-   block under .dark). :root:root has a higher specificity, so these win
-   regardless of stylesheet order, without touching the theme file.
+   The theme engine injects <style id="opencode-theme-variables"> with
+   :root { --background: ... !important } plus the same block under .dark
+   (light theme uses :root:not(.dark)). That style is appended to <head> at
+   runtime, i.e. AFTER this stylesheet's <link>, so an equal-specificity
+   declaration would lose on source order. :root:root:root (0,3,0) beats both
+   :root (0,1,0) and :root:not(.dark) (0,2,0), so these win in light and dark
+   themes alike, without touching the theme file.
    --------------------------------------------------------------------------- */
-:root:root {
+:root:root:root {
   --background: transparent !important;
   --surface-background: transparent !important;
 
