@@ -7,9 +7,13 @@ import { fileURLToPath } from "node:url";
 
 const repo = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const root = path.join(os.tmpdir(), `openchamber-itachou-selftest-${process.pid}`);
-const webDist = path.join(root, "web-dist");
-const assets = path.join(webDist, "assets");
 const dataDir = path.join(root, "data");
+// Fixtures live under DATA_DIR because /apply only trusts web-dist locations
+// that the service itself owns (or that the saved settings point at).
+const webDist = path.join(dataDir, "web-dist");
+const assets = path.join(webDist, "assets");
+const webDistNoHead = path.join(dataDir, "web-dist-nohead");
+const outsideWebDist = path.join(root, "outside-web-dist");
 const image = path.join(root, "test image.jpg");
 const token = "selftest-token";
 
@@ -86,13 +90,19 @@ try {
     "utf8",
   );
   // A web-dist install.ps1 must reject: no </head> to inject into.
-  const webDistNoHead = path.join(root, "web-dist-nohead");
   fs.mkdirSync(path.join(webDistNoHead, "assets"), { recursive: true });
   fs.writeFileSync(
     path.join(webDistNoHead, "index.html"),
     "<!doctype html>\n<html>\n<head>\n<title>no-head</title>\n<body>fixture</body>\n</html>\n",
     "utf8",
   );
+
+  // A lookalike folder outside DATA_DIR: /apply must refuse it even though it
+  // has an index.html and an assets dir, so a token holder cannot rewrite
+  // arbitrary directories. Keep the original bytes to prove it stayed intact.
+  const outsideHtml = "<!doctype html>\n<html><head></head><body>outside</body></html>\n";
+  fs.mkdirSync(path.join(outsideWebDist, "assets"), { recursive: true });
+  fs.writeFileSync(path.join(outsideWebDist, "index.html"), outsideHtml, "utf8");
   fs.writeFileSync(image, Buffer.from([0xff, 0xd8, 0xff, 0xd9]));
 
   // Seed the saved location so /status deterministically reports the fixture
@@ -146,6 +156,14 @@ try {
   const doubleJsonBody = JSON.stringify({ webDist, image });
   const doubleJson = await request(port, "POST", "/apply", doubleJsonBody);
   check("apply accepts a double-encoded JSON body", doubleJson.status === 200 && doubleJson.json?.ok === true, doubleJson.text.slice(0, 240));
+
+  const untrusted = await request(port, "POST", "/apply", { webDist: outsideWebDist, image });
+  check("rejects an untrusted web-dist path", untrusted.status === 400, String(untrusted.status));
+  check(
+    "untrusted web-dist was not modified",
+    fs.readFileSync(path.join(outsideWebDist, "index.html"), "utf8") === outsideHtml
+      && fs.readdirSync(path.join(outsideWebDist, "assets")).length === 0,
+  );
 
   const relative = await request(port, "POST", "/apply", { webDist, image: "bg.jpg" });
   check("rejects a relative image path", relative.status === 400, String(relative.status));
