@@ -344,15 +344,15 @@ function statusPayload() {
   let webDistSource = "auto";
   if (saved.webDist) {
     try {
-      webDist = resolveWebDist(saved.webDist);
+      webDist = resolveWebDist(saved.webDist, saved.webDist);
       webDistSource = "saved";
     } catch (error) {
       log(`discarding saved webDist ${saved.webDist}: ${errorMessage(error)}`);
-      webDist = resolveWebDist(null);
+      webDist = resolveWebDist(null, saved.webDist);
       webDistSource = "fallback";
     }
   } else {
-    webDist = resolveWebDist(null);
+    webDist = resolveWebDist(null, saved.webDist);
   }
 
   const powershell = findPowerShell();
@@ -412,9 +412,25 @@ function inspectWebDist(webDist) {
   };
 }
 
-function resolveWebDist(explicit) {
+// An explicit web-dist is a write target: install.ps1 rewrites its index.html
+// and drops files in assets. Only accept locations that came from this service
+// itself, the detected installs, or the user's saved settings. Without this,
+// any caller holding the token could point /apply at an arbitrary folder that
+// merely happens to contain an index.html.
+function isTrustedWebDist(candidate, savedWebDist) {
+  const normalized = path.resolve(candidate);
+  if (savedWebDist && path.resolve(savedWebDist) === normalized) return true;
+  if (webDistCandidates().some((item) => path.resolve(item) === normalized)) return true;
+  const dataRoot = path.resolve(DATA_DIR);
+  return normalized === dataRoot || normalized.startsWith(dataRoot + path.sep);
+}
+
+function resolveWebDist(explicit, savedWebDist) {
   if (explicit) {
     const full = path.resolve(explicit);
+    if (!isTrustedWebDist(full, savedWebDist)) {
+      throw httpError(400, `指定された web-dist は許可されていません: ${full}`);
+    }
     if (!fs.existsSync(path.join(full, "index.html"))) {
       throw httpError(400, `index.html が見つかりません: ${full}`);
     }
@@ -431,15 +447,15 @@ function resolveWebDist(explicit) {
 // from the caller is an error when invalid; a saved one falls back to the
 // auto-detected install.
 function resolveForWrite(requestedWebDist, saved) {
-  if (requestedWebDist) return resolveWebDist(requestedWebDist);
+  if (requestedWebDist) return resolveWebDist(requestedWebDist, saved.webDist);
   if (saved.webDist) {
     try {
-      return resolveWebDist(saved.webDist);
+      return resolveWebDist(saved.webDist, saved.webDist);
     } catch (error) {
       log(`discarding saved webDist ${saved.webDist}: ${errorMessage(error)}`);
     }
   }
-  return resolveWebDist(null);
+  return resolveWebDist(null, saved.webDist);
 }
 
 function webDistCandidates() {
